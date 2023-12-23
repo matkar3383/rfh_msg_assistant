@@ -8,31 +8,36 @@ import com.ibm.mq.constants.CMQC;
 import com.ibm.mq.headers.MQRFH2;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Hashtable;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class PrepareMqMessage {
 
     public static void main(String[] args) throws MQException {
-        // Załóżmy, że wcześniej odczytaliśmy parametry połączenia i dane z pliku XML
-        String host = "your_host";
-        int port = 1414;
-        String channel = "your_channel";
-        String user = "your_user";
-        String password = "your_password";
+        // Odczytaj parametry połączenia i dane z pliku application.properties
+        Properties properties = readProperties("application.properties");
 
-        // Odczyt danych z pliku XML
-        String xmlFilePath = "path/to/your/xml/file.xml";
+        String host = properties.getProperty("mq.host");
+        int port = Integer.parseInt(properties.getProperty("mq.port"));
+        String channel = properties.getProperty("mq.channel");
+        String user = properties.getProperty("mq.user");
+        String password = properties.getProperty("mq.password");
+
+        String xmlFilePath = properties.getProperty("xml.file.path");
         String xmlContent = readXmlFile(xmlFilePath);
 
         // Przygotowanie wiadomości
         MQQueueManager queueManager = prepareConnection(host, port, channel, user, password);
-        MQQueue queue = prepareQueue(queueManager, "your_queue_name");
+        MQQueue queue = prepareQueue(queueManager, properties.getProperty("mq.queue.name"));
 
         // Tworzenie nagłówka IF_COBA
-        MQRFH2 mqrfh2 = createIfCobaHeader();
+        MQRFH2 mqrfh2 = createIfCobaHeader(xmlContent);
         byte[] xmlBytes = xmlContent.getBytes(StandardCharsets.UTF_8);
 
         // Ustawienia MQMD
@@ -65,8 +70,7 @@ public class PrepareMqMessage {
     }
 
     private static MQQueueManager prepareConnection(String host, int port, String channel, String user, String password) {
-        Hashtable<String, Object> properties;
-        properties = new Hashtable<>();
+        Hashtable<String, Object> properties = new Hashtable<>();
         properties.put(CMQC.HOST_NAME_PROPERTY, host);
         properties.put(CMQC.PORT_PROPERTY, port);
         properties.put(CMQC.CHANNEL_PROPERTY, channel);
@@ -88,7 +92,7 @@ public class PrepareMqMessage {
         }
     }
 
-    private static MQRFH2 createIfCobaHeader() {
+    private static MQRFH2 createIfCobaHeader(String xmlContent) {
         MQRFH2 mqrfh2 = new MQRFH2();
         mqrfh2.setEncoding(CMQC.MQENC_NATIVE);
         mqrfh2.setCodedCharSetId(CMQC.MQCCSI_INHERIT);
@@ -96,10 +100,48 @@ public class PrepareMqMessage {
         mqrfh2.setFlags(0);
         mqrfh2.setNameValueCCSID(1208);
 
-        // Ustawienia nagłówka IF_COBA
-        mqrfh2.setFieldValue("IF_COBA", "Direction", "XXXX");
-        mqrfh2.setFieldValue("IF_COBA", "OriginatorApplication", "XXXX");
-        mqrfh2.setFieldValue("IF_COBA", "Owner", "XXXX");
+        // Odczytaj dane z pliku XML
+        
+        /* 
+        <IF_COBA>
+            <Direction>Input</Direction>
+            <OriginatorApplication>COW01</OriginatorApplication>
+            <Owner>COBADEF0</Owner>
+            <UserReference>COW.HJX-CR01P8-1113121059-5.</UserReference>
+            <Requestor>o=cobadeff,o=swift</Requestor>
+            <Responder>cn=central,cn=serv,o=ebapfrpp,o=swift</Responder>
+            <Service>eba.step2!pu1</Service>
+            <RequestType>pacs.xxx.sct.r.icf</RequestType>
+            <DeliveryMode>RealTime</DeliveryMode>
+            <DelNotRequest>TRUE</DelNotRequest>
+            <DelNotReceiverDN>o=cobadeff,o=swift</DelNotReceiverDN>
+            <Compression>None</Compression>
+            <NRIndicator>TRUE</NRIndicator>
+            <FileName>S202SCTCOBADEF02311159990804.I</FileName>
+            <FileReference>S202SCTCOBADEF02311159990804.I</FileReference>
+            <DuplicateCheckOverride>Skip</DuplicateCheckOverride>
+        </IF_COBA>
+        */
+        String directionValue = readXmlValue(xmlContent, "Direction");
+        String xxxxValue = readXmlValue(xmlContent, "XXXX");
+
+        try {
+            // Ustawienia nagłówka IF_COBA
+            mqrfh2.setFieldValue("IF_COBA", "Direction", directionValue);
+        } catch (IOException ex) {
+            Logger.getLogger(PrepareMqMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        try {
+            mqrfh2.setFieldValue("IF_COBA", "OriginatorApplication", xxxxValue);
+        } catch (IOException ex) {
+            Logger.getLogger(PrepareMqMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        try {
+            mqrfh2.setFieldValue("IF_COBA", "Owner", xxxxValue);
+        } catch (IOException ex) {
+            Logger.getLogger(PrepareMqMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
         // ... Pozostałe ustawienia
 
         return mqrfh2;
@@ -113,6 +155,33 @@ public class PrepareMqMessage {
         }
     }
 
-    public static void processFileContent(String fileContent) {
+    private static String readXmlValue(String xmlContent, String tagName) {
+        // Implementacja odczytu wartości dla danego tagu z pliku XML
+        // Tu musisz dostosować logikę odczytu wartości z pliku XML
+        // Możesz użyć biblioteki do parsowania XML, np. DOM lub JAXB
+        // W tym przykładzie zakładam prosty odczyt, ale w rzeczywistym przypadku będziesz musiał dostosować to do struktury twojego pliku XML
+        String startTag = "<" + tagName + ">";
+        String endTag = "</" + tagName + ">";
+        int startIndex = xmlContent.indexOf(startTag);
+        int endIndex = xmlContent.indexOf(endTag, startIndex);
+        if (startIndex != -1 && endIndex != -1) {
+            return xmlContent.substring(startIndex + startTag.length(), endIndex);
+        } else {
+            throw new RuntimeException("Error reading value for tag: " + tagName);
+        }
+    }
+
+    private static Properties readProperties(String propertiesFile) {
+        Properties properties = new Properties();
+        try (InputStream input = PrepareMqMessage.class.getClassLoader().getResourceAsStream(propertiesFile)) {
+            if (input == null) {
+                System.out.println("Sorry, unable to find " + propertiesFile);
+                return properties;
+            }
+            properties.load(input);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return properties;
     }
 }
