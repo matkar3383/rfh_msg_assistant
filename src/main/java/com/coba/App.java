@@ -4,7 +4,9 @@ package com.coba;
  * Hello world!
  */
 public final class App {
+
     private App() {
+        throw new IllegalStateException("Utility class");
     }
 
     /**
@@ -12,6 +14,14 @@ public final class App {
      * @param args The arguments of the program.
      */
     public static void main(String[] args) {
-        System.out.println("Hello World!");
+        // Load application properties
+        PropertiesLoader.loadProperties();
+
+        // Get file path from application properties
+        String filePath = PropertiesLoader.getProperty("file.path");
+
+        // Create and run ServerFileScanner with LoggerManager instance
+        ServerFileScanner fileScanner = new ServerFileScanner(filePath, LoggerManager.getInstance());
+        fileScanner.continuouslyScanServerLocation();
     }
 }
