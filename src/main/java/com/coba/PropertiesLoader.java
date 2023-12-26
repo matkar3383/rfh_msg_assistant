@@ -1,41 +1,40 @@
 package com.coba;
 
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * Utility class for loading properties from the application.properties file.
+ * Klasa narzędziowa do wczytywania właściwości z pliku.
  */
 public final class PropertiesLoader {
-
-    private static final String PROPERTIES_FILE_NAME = "application.properties";
-    private static Properties properties;
+    @SuppressWarnings("checkstyle:ConstantName")
+    private static final Properties properties = new Properties();
 
     private PropertiesLoader() {
-        throw new IllegalStateException("Utility class");
+        // Prywatny konstruktor, aby zapobiec instancjonowaniu
     }
 
     /**
-     * Loads properties from the application.properties file.
+     * Wczytuje właściwości z pliku.
+     *
+     * @return true, jeśli właściwości zostały pomyślnie wczytane, false w przeciwnym razie.
      */
-    public static void loadProperties() {
-        properties = new Properties();
-        try (InputStream input = PropertiesLoader.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE_NAME)) {
-            if (input == null) {
-                System.err.println("Sorry, unable to find " + PROPERTIES_FILE_NAME);
-                return;
-            }
+    public static boolean loadProperties() {
+        try (FileInputStream input = new FileInputStream("src/main/resources/application.properties")) {
             properties.load(input);
+            return true; // Zwróć true, jeśli właściwości zostały pomyślnie wczytane
         } catch (IOException e) {
-            System.err.println("Error loading " + PROPERTIES_FILE_NAME + ": " + e.getMessage());
+            System.err.println("Błąd podczas wczytywania właściwości: " + e.getMessage());
+            return false; // Zwróć false, jeśli wystąpi błąd podczas wczytywania
         }
     }
 
     /**
-     * Gets the value of a property.
-     * @param key The key of the property.
-     * @return The value of the property.
+     * Pobiera wartość właściwości na podstawie klucza.
+     *
+     * @param key Klucz właściwości.
+     * @return Wartość właściwości lub null, jeśli klucz nie został znaleziony.
      */
     public static String getProperty(String key) {
         return properties.getProperty(key);

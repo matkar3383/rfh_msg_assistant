@@ -10,18 +10,22 @@ public final class App {
     }
 
     /**
-     * Says hello to the world.
-     * @param args The arguments of the program.
+     * Main method to run the application.
+     *
+     * @param args The command line arguments.
      */
     public static void main(String[] args) {
         // Load application properties
-        PropertiesLoader.loadProperties();
+        if (!PropertiesLoader.loadProperties()) {
+            System.err.println("Failed to load application properties. Exiting...");
+            System.exit(1);
+        }
 
-        // Get file path from application properties
-        String filePath = PropertiesLoader.getProperty("file.path");
+        // Get directory path from application properties
+        String directoryPath = PropertiesLoader.getProperty("directory.path");
 
         // Create and run ServerFileScanner with LoggerManager instance
-        ServerFileScanner fileScanner = new ServerFileScanner(filePath, LoggerManager.getInstance());
+        ServerFileScanner fileScanner = new ServerFileScanner(directoryPath, LoggerManager.getInstance());
         fileScanner.continuouslyScanServerLocation();
     }
 }

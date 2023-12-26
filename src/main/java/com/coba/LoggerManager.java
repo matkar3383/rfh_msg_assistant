@@ -37,28 +37,30 @@ public final class LoggerManager {
         try {
             // Check if the log file already exists
             File logFile = new File(logFilePath);
+            // Log the paths for debugging
+            LOGGER.info("Provided log file path: " + logFilePath);
+            LOGGER.info("Parent directory: " + logFile.getParent());
             if (!logFile.exists()) {
                 // Create the log file and its parent directories
                 logFile.getParentFile().mkdirs();
                 logFile.createNewFile();
             }
-
             // Create a file handler that writes log records to the log file
-            FileHandler fileHandler = new FileHandler(logFilePath, true); // 'true' appends to the file
+            FileHandler fileHandler = new FileHandler(logFile.getPath(), true); // 'true' appends to the file
             fileHandler.setFormatter(new SimpleFormatter());
-
             // Add the file handler to the logger
             LOGGER.addHandler(fileHandler);
-
+            // Flush the file handler to ensure logs are written immediately
+            fileHandler.flush();
         } catch (IOException e) {
             LOGGER.severe("Error configuring logger: " + e.getMessage());
         }
     }
 
     /**
-     * Logs an info message.
-     * @param message The message to log.
-     */
+    * Logs an info message.
+    * @param message The message to log.
+    */
     public void logInfo(String message) {
         LOGGER.info(message);
     }
