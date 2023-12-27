@@ -5,20 +5,20 @@ import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * Utility class for loading properties from a file.
+ *
+ * @author MateOo
  */
 public final class PropertiesLoader {
 
-    private static final String PROPERTIES_FILE = "src/main/resources/application.properties";
+    private static final String PROPERTIES_FILE = "application.properties";
     private static Properties properties;
-
-    private PropertiesLoader() {
-        // Utility class should not have public or default constructor
-        throw new AssertionError();
-    }
 
     static {
         initProperties();
+    }
+
+    private PropertiesLoader() {
+        throw new AssertionError("Utility class should not be instantiated");
     }
 
     private static void initProperties() {

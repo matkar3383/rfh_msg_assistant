@@ -1,21 +1,24 @@
 package com.coba;
 
-import java.io.IOException;
-
 /**
  * Main application class.
  */
 public final class App {
 
+    /**
+     * Private constructor to prevent instantiation of the utility class.
+     */
     private App() {
-        // Utility class should not have public or default constructor
-        throw new AssertionError();
+        throw new AssertionError("Utility class should not be instantiated");
     }
 
     /**
-     * @param args
+     * Main method of the application.
+     *
+     * @param args Command line arguments.
      */
     public static void main(String[] args) {
+        // Initialize LoggerManager (should only be done once)
         LoggerManager loggerManager = LoggerManager.getInstance();
 
         // Load application properties
@@ -35,17 +38,10 @@ public final class App {
 
         // Continuously scan the server location
         serverFileScanner.continuouslyScanServerLocation(file -> {
-            try {
-                // Prepare and send message to MQ
-                msgToMQ.prepareAndSendToMQ(file);
-
-                // Log success message
-                loggerManager.logInfo("Successfully processed and sent file to MQ: "
-                        + serverFileScanner.getFileName());
-            } catch (IOException e) {
-                // Log error if an issue occurs during MQ message preparation or sending
-                loggerManager.logError("Error processing or sending file to MQ: " + e.getMessage());
-            }
+            // Prepare and send message to MQ
+            msgToMQ.prepareAndSendToMQ(file);
+            // Log success message
+            loggerManager.logInfo("Successfully processed and sent file to MQ: " + file.getName());
         });
 
         // Shut down gracefully when the application is interrupted

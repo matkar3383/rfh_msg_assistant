@@ -113,6 +113,11 @@ public class ServerFileScanner {
             }
 
             loggerManager.logInfo("Successfully loaded file: " + lastFileName);
+            // Debug: Log the content of the file
+            loggerManager.logInfo("File Content: " + contentBuilder.toString());
+
+            // Process the file using the provided FileProcessor
+            fileProcessor.processFile(file);
         } catch (FileNotFoundException e) {
             loggerManager.logError("File not found: " + lastFilePath);
         }
