@@ -7,8 +7,10 @@ import java.util.Comparator;
 import java.util.Scanner;
 
 /**
- * This class scans a server location for a file and reads its content into a String.
- * It continuously checks for a file at the specified location and logs successful file loading.
+ * This class scans a server location for a file and reads its content into a
+ * String.
+ * It continuously checks for a file at the specified location and logs
+ * successful file loading.
  */
 public class ServerFileScanner {
 
@@ -19,6 +21,12 @@ public class ServerFileScanner {
     private String lastFileName;
     private volatile boolean isRunning = true;
 
+    /**
+     * Constructs a ServerFileScanner.
+     *
+     * @param directoryPath The path to the server directory.
+     * @param loggerManager The logger manager.
+     */
     public ServerFileScanner(String directoryPath, LoggerManager loggerManager) {
         this.directoryPath = directoryPath;
         this.loggerManager = loggerManager;
@@ -32,9 +40,12 @@ public class ServerFileScanner {
     }
 
     /**
-     * Continuously scans the server location for the specified file and reads its content.
+     * Continuously scans the server location for the specified file and reads its
+     * content.
+     *
+     * @param fileProcessor The processor to handle the file when found.
      */
-    public void continuouslyScanServerLocation() {
+    public void continuouslyScanServerLocation(FileProcessor fileProcessor) {
         while (isRunning) {
             File directory = new File(directoryPath);
 
@@ -45,7 +56,7 @@ public class ServerFileScanner {
             File oldestFile = findOldestFile(directory);
 
             if (oldestFile != null) {
-                processOldestFile(oldestFile);
+                processOldestFile(oldestFile, fileProcessor);
             }
 
             sleepForInterval();
@@ -90,7 +101,7 @@ public class ServerFileScanner {
         return files[0];
     }
 
-    private void processOldestFile(File file) {
+    private void processOldestFile(File file, FileProcessor fileProcessor) {
         lastFilePath = file.getAbsolutePath();
         lastFileName = file.getName();
 
@@ -113,5 +124,17 @@ public class ServerFileScanner {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * Interface for processing a file.
+     */
+    public interface FileProcessor {
+        /**
+         * Process the file.
+         *
+         * @param file The file to process.
+         */
+        void processFile(File file);
     }
 }

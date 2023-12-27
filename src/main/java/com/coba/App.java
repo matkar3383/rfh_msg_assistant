@@ -1,17 +1,25 @@
 package com.coba;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.Properties;
-import java.util.logging.Level;
 
-public class App {
+/**
+ * Main application class.
+ */
+public final class App {
 
+    private App() {
+        // Utility class should not have public or default constructor
+        throw new AssertionError();
+    }
+
+    /**
+     * @param args
+     */
     public static void main(String[] args) {
         LoggerManager loggerManager = LoggerManager.getInstance();
 
         // Load application properties
-        if (!PropertiesLoader.loadProperties("application.properties")) {
+        if (PropertiesLoader.getProperties() == null) {
             loggerManager.logError("Failed to load application properties. Exiting...");
             System.exit(1);
         }
@@ -32,7 +40,8 @@ public class App {
                 msgToMQ.prepareAndSendToMQ(file);
 
                 // Log success message
-                loggerManager.logInfo("Successfully processed and sent file to MQ: " + file.getName());
+                loggerManager.logInfo("Successfully processed and sent file to MQ: "
+                        + serverFileScanner.getFileName());
             } catch (IOException e) {
                 // Log error if an issue occurs during MQ message preparation or sending
                 loggerManager.logError("Error processing or sending file to MQ: " + e.getMessage());

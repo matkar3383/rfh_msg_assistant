@@ -10,38 +10,35 @@ import java.util.Properties;
 public final class PropertiesLoader {
 
     private static final String PROPERTIES_FILE = "src/main/resources/application.properties";
-    private static final Properties PROPERTIES = loadProperties();
+    private static Properties properties;
 
     private PropertiesLoader() {
-        // private constructor to prevent instantiation
+        // Utility class should not have public or default constructor
+        throw new AssertionError();
     }
 
-    /**
-     * Load properties from the file.
-     *
-     * @return The loaded properties.
-     */
-    static Properties loadProperties() {
-        Properties properties = new Properties();
+    static {
+        initProperties();
+    }
+
+    private static void initProperties() {
+        properties = new Properties();
         try (InputStream input = PropertiesLoader.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
             if (input == null) {
-                throw new IOException("Sorry, unable to find " + PROPERTIES_FILE);
+                System.out.println("Sorry, unable to find " + PROPERTIES_FILE);
+                return;
             }
             properties.load(input);
-        } catch (IOException e) {
-            e.printStackTrace();
-            // Handle the exception according to your needs
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
+    }
+
+    public static Properties getProperties() {
         return properties;
     }
 
-    /**
-     * Get the value of a property.
-     *
-     * @param key The key of the property.
-     * @return The value of the property.
-     */
     public static String getProperty(String key) {
-        return PROPERTIES.getProperty(key);
+        return properties.getProperty(key);
     }
 }
