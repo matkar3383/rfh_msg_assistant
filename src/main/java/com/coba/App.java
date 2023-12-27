@@ -1,53 +1,46 @@
 package com.coba;
 
+import java.io.IOException;
+
 /**
- * Main application class.
+ * Main application class for handling file scanning and message preparation for MQ.
  */
 public final class App {
 
-    /**
-     * Private constructor to prevent instantiation of the utility class.
-     */
     private App() {
-        throw new AssertionError("Utility class should not be instantiated");
+        throw new UnsupportedOperationException("Utility class - do not instantiate");
     }
 
     /**
-     * Main method of the application.
+     * Main method to run the application.
      *
      * @param args Command line arguments.
      */
     public static void main(String[] args) {
-        // Initialize LoggerManager (should only be done once)
-        LoggerManager loggerManager = LoggerManager.getInstance();
+        try {
+            PropertiesLoader.getProperties();
+            String fileScannerLogPath = PropertiesLoader.getProperty("fileScanner.log");
+            String prepareMsgLogPath = PropertiesLoader.getProperty("prepareMsg.log");
+            LoggerManager fileScannerLoggerManager = LoggerManager.getInstance(fileScannerLogPath);
+            LoggerManager prepareMsgLoggerManager = LoggerManager.getInstance(prepareMsgLogPath);
 
-        // Load application properties
-        if (PropertiesLoader.getProperties() == null) {
-            loggerManager.logError("Failed to load application properties. Exiting...");
-            System.exit(1);
+            ServerFileScanner serverFileScanner = new ServerFileScanner(
+                    PropertiesLoader.getProperty("server.directory"), fileScannerLoggerManager);
+
+            String fileToSend = serverFileScanner.getFilePath();
+
+            if (fileToSend != null) {
+                MsgToMQ msgToMQ = new MsgToMQ(prepareMsgLoggerManager);
+                msgToMQ.prepareAndSendToMQ(fileToSend);
+
+                fileScannerLoggerManager.closeLogFile();
+                prepareMsgLoggerManager.closeLogFile();
+            } else {
+                System.out.println("No files to send.");
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
-        // Get directory path from application.properties
-        String directoryPath = PropertiesLoader.getProperty("server.directory");
-
-        // Initialize server file scanner
-        ServerFileScanner serverFileScanner = new ServerFileScanner(directoryPath, loggerManager);
-
-        // Initialize MQ message preparer
-        MsgToMQ msgToMQ = new MsgToMQ(loggerManager);
-
-        // Continuously scan the server location
-        serverFileScanner.continuouslyScanServerLocation(file -> {
-            // Prepare and send message to MQ
-            msgToMQ.prepareAndSendToMQ(file);
-            // Log success message
-            loggerManager.logInfo("Successfully processed and sent file to MQ: " + file.getName());
-        });
-
-        // Shut down gracefully when the application is interrupted
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            serverFileScanner.stop();
-            loggerManager.logInfo("Application shut down gracefully.");
-        }));
     }
 }

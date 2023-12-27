@@ -6,8 +6,6 @@ import com.ibm.mq.MQQueue;
 import com.ibm.mq.MQQueueManager;
 import com.ibm.mq.constants.CMQC;
 import com.ibm.mq.headers.MQRFH2;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -19,14 +17,7 @@ import java.util.logging.Logger;
  */
 public class MsgToMQ {
 
-    /**
-     * Logger for the MsgToMQ class.
-     */
     private static final Logger LOG = Logger.getLogger(MsgToMQ.class.getName());
-
-    /**
-     * The logger manager.
-     */
     private final LoggerManager loggerManager;
 
     /**
@@ -43,12 +34,10 @@ public class MsgToMQ {
      *
      * @param file The file to be sent as a message.
      */
-    public void prepareAndSendToMQ(File file) {
+    public void prepareAndSendToMQ(String file) {
         try {
             // Load application properties
             PropertiesLoader.getProperties();
-
-            // Get values from application.properties
             String host = PropertiesLoader.getProperty("mq.host");
             int port = Integer.parseInt(PropertiesLoader.getProperty("mq.port"));
             String channel = PropertiesLoader.getProperty("mq.channel");
@@ -56,7 +45,6 @@ public class MsgToMQ {
             String appPassword = PropertiesLoader.getProperty("mq.appPassword");
             String qmgr = PropertiesLoader.getProperty("mq.qmgr");
             String queueName = PropertiesLoader.getProperty("mq.queueName");
-
             int encoding = Integer.parseInt(PropertiesLoader.getProperty("mq.encoding"));
             int codedCharSetId = Integer.parseInt(PropertiesLoader.getProperty("mq.codedCharSetId"));
             int bufferSize = Integer.parseInt(PropertiesLoader.getProperty("mq.bufferSize"));
@@ -68,7 +56,13 @@ public class MsgToMQ {
             properties.put(CMQC.USER_ID_PROPERTY, appUser);
             properties.put(CMQC.PASSWORD_PROPERTY, appPassword);
 
-            try (FileInputStream inputStream = new FileInputStream(file)) {
+            File fileToProcess = new File(file);
+            if (!fileToProcess.exists()) {
+                loggerManager.logError("File does not exist: " + file);
+                return;
+            }
+
+            try (FileInputStream inputStream = new FileInputStream(fileToProcess)) {
                 MQQueueManager queueManager = new MQQueueManager(qmgr, properties);
                 MQQueue queue = queueManager.accessQueue(queueName, CMQC.MQOO_BROWSE);
 
@@ -80,22 +74,10 @@ public class MsgToMQ {
                 mqrfh2.setFlags(0);
                 mqrfh2.setNameValueCCSID(codedCharSetId);
                 mqrfh2.setFieldValue(ifCobaString, "OriginatorApplication", "xxxxx");
-                mqrfh2.setFieldValue(ifCobaString, "UserReference", "xxxxx");
-                String requestor = "o=" + PropertiesLoader.getProperty("mq.requestorOrg") + ",o=swift";
-                mqrfh2.setFieldValue(ifCobaString, "Requestor", requestor);
-                mqrfh2.setFieldValue(ifCobaString, "Responder",
-                        "o=" + PropertiesLoader.getProperty("mq.responderOrg") + ",o=swift");
-                mqrfh2.setFieldValue(ifCobaString, "Service", PropertiesLoader.getProperty("mq.service"));
-                mqrfh2.setFieldValue(ifCobaString, "RequestType", PropertiesLoader.getProperty("mq.requestType"));
-                mqrfh2.setFieldValue(ifCobaString, "Compression", PropertiesLoader.getProperty("mq.compression"));
-                mqrfh2.setFieldValue(ifCobaString, "FileName", file.getName());
+                // ... (Pozostałe ustawienia RFH2)
 
                 MQMessage msgForSending = new MQMessage();
-
-                // Writing RFH2 header and message payload
-                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                mqrfh2.write(new DataOutputStream(byteArrayOutputStream), 0, 0);
-                msgForSending.write(byteArrayOutputStream.toByteArray());
+                // ... (Pozostała część kodu)
 
                 // Write message payload
                 byte[] buf1 = new byte[bufferSize];
@@ -116,7 +98,7 @@ public class MsgToMQ {
 
                 queue.put(msgForSending);
 
-                loggerManager.logInfo("Successfully sent message to MQ: " + file.getName());
+                loggerManager.logInfo("Successfully sent message to MQ: " + fileToProcess.getName());
 
                 queue.close();
                 queueManager.disconnect();

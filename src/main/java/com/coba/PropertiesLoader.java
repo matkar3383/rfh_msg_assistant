@@ -5,8 +5,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 /**
- *
- * @author MateOo
+ * Utility class for loading properties from the configuration file.
  */
 public final class PropertiesLoader {
 
@@ -21,6 +20,9 @@ public final class PropertiesLoader {
         throw new AssertionError("Utility class should not be instantiated");
     }
 
+    /**
+     * Initializes properties by loading them from the configuration file.
+     */
     private static void initProperties() {
         properties = new Properties();
         try (InputStream input = PropertiesLoader.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
@@ -34,10 +36,21 @@ public final class PropertiesLoader {
         }
     }
 
+    /**
+     * Gets the loaded properties.
+     *
+     * @return The loaded properties.
+     */
     public static Properties getProperties() {
         return properties;
     }
 
+    /**
+     * Gets the value for a specified key from the loaded properties.
+     *
+     * @param key The key for which to get the value.
+     * @return The value for the specified key.
+     */
     public static String getProperty(String key) {
         return properties.getProperty(key);
     }

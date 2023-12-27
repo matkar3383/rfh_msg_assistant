@@ -1,3 +1,6 @@
 ﻿target
 logs
 logs
+target
+*.log
+*.lck

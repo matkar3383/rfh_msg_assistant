@@ -1,59 +1,42 @@
 package com.coba;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.logging.FileHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 /**
- * Logger manager class to configure and manage application logging.
+ * Utility class for managing logs using java.util.logging.
  */
 public final class LoggerManager {
 
-    private static final String LOGS_DIRECTORY = "/logs";
+    private final Logger logger;
 
-    private static final Logger LOGGER = Logger.getLogger(LoggerManager.class.getName());
-
-    private static final LoggerManager INSTANCE = new LoggerManager();
-
-    private LoggerManager() {
-        // Prevent instantiation
-        if (INSTANCE != null) {
-            throw new AssertionError("Use getInstance() method to get the single instance of this class.");
-        }
+    /**
+     * Private constructor to prevent instantiation from outside.
+     *
+     * @param logFilePath The path to the log file.
+     * @throws IOException If an I/O error occurs.
+     */
+    private LoggerManager(String logFilePath) throws IOException {
+        FileHandler fileHandler = new FileHandler(logFilePath, true);
+        fileHandler.setFormatter(new SimpleFormatter());
+        logger = Logger.getLogger(LoggerManager.class.getName());
+        logger.addHandler(fileHandler);
+        logger.setLevel(Level.ALL); // Set the logging level to ALL
     }
 
     /**
-     * Gets the singleton instance of the LoggerManager.
+     * Gets an instance of LoggerManager.
      *
+     * @param logFilePath The path to the log file.
      * @return The LoggerManager instance.
+     * @throws IOException If an I/O error occurs.
      */
-    public static LoggerManager getInstance() {
-        return INSTANCE;
-    }
-
-    /**
-     * Configures the logger and creates log files.
-     *
-     * @param logFileName The name of the log file.
-     */
-    public void configureLogger(String logFileName) {
-        try {
-            File logsDirectory = new File(LOGS_DIRECTORY);
-            if (!logsDirectory.exists()) {
-                if (logsDirectory.mkdirs()) {
-                    logInfo("Logs directory created: " + LOGS_DIRECTORY);
-                } else {
-                    logError("Failed to create logs directory: " + LOGS_DIRECTORY);
-                }
-            }
-
-            FileHandler fileHandler = new FileHandler(LOGS_DIRECTORY + File.separator + logFileName);
-            LOGGER.addHandler(fileHandler);
-        } catch (IOException e) {
-            logError("Error configuring logger: " + e.getMessage());
-        }
+    public static LoggerManager getInstance(String logFilePath) throws IOException {
+        return new LoggerManager(logFilePath);
     }
 
     /**
@@ -62,7 +45,7 @@ public final class LoggerManager {
      * @param message The message to log.
      */
     public void logInfo(String message) {
-        LOGGER.log(Level.INFO, message);
+        logger.info(message);
     }
 
     /**
@@ -71,6 +54,15 @@ public final class LoggerManager {
      * @param message The error message to log.
      */
     public void logError(String message) {
-        LOGGER.log(Level.SEVERE, message);
+        logger.severe(message);
+    }
+
+    /**
+     * Closes the log file.
+     */
+    public void closeLogFile() {
+        for (Handler handler : logger.getHandlers()) {
+            handler.close();
+        }
     }
 }

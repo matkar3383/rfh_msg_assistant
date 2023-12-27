@@ -8,8 +8,7 @@ import java.util.Scanner;
 
 /**
  * This class scans a server location for a file and reads its content into a
- * String.
- * It continuously checks for a file at the specified location and logs
+ * String. It continuously checks for a file at the specified location and logs
  * successful file loading.
  */
 public class ServerFileScanner {
@@ -21,29 +20,18 @@ public class ServerFileScanner {
     private String lastFileName;
     private volatile boolean isRunning = true;
 
-    /**
-     * Constructs a ServerFileScanner.
-     *
-     * @param directoryPath The path to the server directory.
-     * @param loggerManager The logger manager.
-     */
     public ServerFileScanner(String directoryPath, LoggerManager loggerManager) {
         this.directoryPath = directoryPath;
         this.loggerManager = loggerManager;
     }
 
-    /**
-     * Stops the server file scanner.
-     */
     public void stop() {
         isRunning = false;
     }
 
     /**
-     * Continuously scans the server location for the specified file and reads its
-     * content.
      *
-     * @param fileProcessor The processor to handle the file when found.
+     * @param fileProcessor
      */
     public void continuouslyScanServerLocation(FileProcessor fileProcessor) {
         while (isRunning) {
@@ -63,20 +51,10 @@ public class ServerFileScanner {
         }
     }
 
-    /**
-     * Gets the file path of the last processed file.
-     *
-     * @return The file path.
-     */
     public String getFilePath() {
         return lastFilePath;
     }
 
-    /**
-     * Gets the name of the last processed file.
-     *
-     * @return The file name.
-     */
     public String getFileName() {
         return lastFileName;
     }
@@ -104,20 +82,20 @@ public class ServerFileScanner {
     private void processOldestFile(File file, FileProcessor fileProcessor) {
         lastFilePath = file.getAbsolutePath();
         lastFileName = file.getName();
+        StringBuilder contentBuilder = new StringBuilder();
 
         try (Scanner scanner = new Scanner(file)) {
-            StringBuilder contentBuilder = new StringBuilder();
-
             while (scanner.hasNext()) {
                 contentBuilder.append(scanner.nextLine());
             }
 
-            loggerManager.logInfo("Successfully loaded file: " + lastFileName);
-            // Debug: Log the content of the file
-            loggerManager.logInfo("File Content: " + contentBuilder.toString());
+            String content = contentBuilder.toString();
+            loggerManager.logInfo("File Content: " + content);
 
-            // Process the file using the provided FileProcessor
             fileProcessor.processFile(file);
+
+            loggerManager.logInfo("Successfully loaded file: " + lastFileName);
+
         } catch (FileNotFoundException e) {
             loggerManager.logError("File not found: " + lastFilePath);
         }
@@ -132,14 +110,9 @@ public class ServerFileScanner {
     }
 
     /**
-     * Interface for processing a file.
+     *
      */
     public interface FileProcessor {
-        /**
-         * Process the file.
-         *
-         * @param file The file to process.
-         */
         void processFile(File file);
     }
 }
