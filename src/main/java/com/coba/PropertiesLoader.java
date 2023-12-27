@@ -8,8 +8,8 @@ import java.util.Properties;
  * Klasa narzędziowa do wczytywania właściwości z pliku.
  */
 public final class PropertiesLoader {
-    @SuppressWarnings("checkstyle:ConstantName")
-    private static final Properties properties = new Properties();
+
+    private static final Properties PROPERTIES = new Properties();
 
     private PropertiesLoader() {
         // Prywatny konstruktor, aby zapobiec instancjonowaniu
@@ -18,11 +18,12 @@ public final class PropertiesLoader {
     /**
      * Wczytuje właściwości z pliku.
      *
-     * @return true, jeśli właściwości zostały pomyślnie wczytane, false w przeciwnym razie.
+     * @return true, jeśli właściwości zostały pomyślnie wczytane, false w
+     *         przeciwnym razie.
      */
     public static boolean loadProperties() {
         try (FileInputStream input = new FileInputStream("src/main/resources/application.properties")) {
-            properties.load(input);
+            PROPERTIES.load(input);
             return true; // Zwróć true, jeśli właściwości zostały pomyślnie wczytane
         } catch (IOException e) {
             System.err.println("Błąd podczas wczytywania właściwości: " + e.getMessage());
@@ -37,6 +38,6 @@ public final class PropertiesLoader {
      * @return Wartość właściwości lub null, jeśli klucz nie został znaleziony.
      */
     public static String getProperty(String key) {
-        return properties.getProperty(key);
+        return PROPERTIES.getProperty(key);
     }
 }

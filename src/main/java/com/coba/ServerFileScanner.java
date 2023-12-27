@@ -53,7 +53,7 @@ public class ServerFileScanner {
 
     private boolean checkDirectory(File directory) {
         if (!directory.exists() || !directory.isDirectory()) {
-            System.err.println("The specified directory does not exist: " + directory.getAbsolutePath());
+            loggerManager.logInfo("The specified directory does not exist: " + directory.getAbsolutePath());
             return false;
         }
         return true;
@@ -63,7 +63,7 @@ public class ServerFileScanner {
         File[] files = directory.listFiles();
 
         if (files == null || files.length == 0) {
-            System.err.println("No files found in the specified directory: " + directory.getAbsolutePath());
+            loggerManager.logInfo("No files found in the specified directory: " + directory.getAbsolutePath());
             return null;
         }
 
@@ -80,7 +80,7 @@ public class ServerFileScanner {
                 lastFileContent = fileContent;
             }
         } catch (FileNotFoundException e) {
-            System.err.println("Error while reading the file: " + e.getMessage());
+            loggerManager.logInfo("Error while reading the file: " + e.getMessage());
         }
     }
 
@@ -93,20 +93,19 @@ public class ServerFileScanner {
             // Sleep for the defined interval before checking again
             Thread.sleep(SCAN_INTERVAL_MS);
         } catch (InterruptedException e) {
-            System.err.println("Thread sleep interrupted: " + e.getMessage());
+            loggerManager.logInfo("Thread sleep interrupted: " + e.getMessage());
         }
     }
 
     /**
-     * @param file
-     * @return
-     * @throws FileNotFoundException
+     * Reads the content of the file.
+     *
+     * @param file The file to read.
+     * @return The content of the file as a String.
+     * @throws FileNotFoundException If the file is not found.
      */
     private String readFileContent(File file) throws FileNotFoundException {
-        Scanner scanner = null;
-
-        try {
-            scanner = new Scanner(file);
+        try (Scanner scanner = new Scanner(file)) {
             StringBuilder contentBuilder = new StringBuilder();
 
             while (scanner.hasNextLine()) {
@@ -114,10 +113,6 @@ public class ServerFileScanner {
             }
 
             return contentBuilder.toString();
-        } finally {
-            if (scanner != null) {
-                scanner.close();
-            }
         }
     }
 }
