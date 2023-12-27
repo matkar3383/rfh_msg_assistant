@@ -15,7 +15,8 @@ public class ServerFileScanner {
     private static final int SCAN_INTERVAL_MS = 1000;
     private final LoggerManager loggerManager;
     private final String directoryPath;
-    private String lastFileContent;
+    private String lastFilePath;
+    private String lastFileName;
     private volatile boolean isRunning = true;
 
     public ServerFileScanner(String directoryPath, LoggerManager loggerManager) {
@@ -51,6 +52,24 @@ public class ServerFileScanner {
         }
     }
 
+    /**
+     * Gets the file path of the last processed file.
+     *
+     * @return The file path.
+     */
+    public String getFilePath() {
+        return lastFilePath;
+    }
+
+    /**
+     * Gets the name of the last processed file.
+     *
+     * @return The file name.
+     */
+    public String getFileName() {
+        return lastFileName;
+    }
+
     private boolean checkDirectory(File directory) {
         if (!directory.exists() || !directory.isDirectory()) {
             loggerManager.logInfo("The specified directory does not exist: " + directory.getAbsolutePath());
@@ -71,49 +90,28 @@ public class ServerFileScanner {
         return files[0];
     }
 
-    private void processOldestFile(File oldestFile) {
-        try {
-            String fileContent = readFileContent(oldestFile);
+    private void processOldestFile(File file) {
+        lastFilePath = file.getAbsolutePath();
+        lastFileName = file.getName();
 
-            if (!fileContent.equals(lastFileContent)) {
-                logSuccessfulFileLoading(oldestFile.getName());
-                lastFileContent = fileContent;
+        try (Scanner scanner = new Scanner(file)) {
+            StringBuilder contentBuilder = new StringBuilder();
+
+            while (scanner.hasNext()) {
+                contentBuilder.append(scanner.nextLine());
             }
-        } catch (FileNotFoundException e) {
-            loggerManager.logInfo("Error while reading the file: " + e.getMessage());
-        }
-    }
 
-    private void logSuccessfulFileLoading(String fileName) {
-        loggerManager.logInfo("Plik \"" + fileName + "\" został poprawnie wczytany.");
+            loggerManager.logInfo("Successfully loaded file: " + lastFileName);
+        } catch (FileNotFoundException e) {
+            loggerManager.logError("File not found: " + lastFilePath);
+        }
     }
 
     private void sleepForInterval() {
         try {
-            // Sleep for the defined interval before checking again
             Thread.sleep(SCAN_INTERVAL_MS);
         } catch (InterruptedException e) {
-            loggerManager.logInfo("Thread sleep interrupted: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Reads the content of the file.
-     *
-     * @param file The file to read.
-     * @return The content of the file as a String.
-     * @throws FileNotFoundException If the file is not found.
-     */
-    @SuppressWarnings("ConvertToTryWithResources")
-    private String readFileContent(File file) throws FileNotFoundException {
-        try (Scanner scanner = new Scanner(file)) {
-            StringBuilder contentBuilder = new StringBuilder();
-
-            while (scanner.hasNextLine()) {
-                contentBuilder.append(scanner.nextLine()).append("\n");
-            }
-
-            return contentBuilder.toString();
+            Thread.currentThread().interrupt();
         }
     }
 }

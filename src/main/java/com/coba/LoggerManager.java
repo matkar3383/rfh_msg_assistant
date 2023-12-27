@@ -3,6 +3,7 @@ package com.coba;
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.FileHandler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
@@ -15,7 +16,7 @@ public final class LoggerManager {
     private static final Logger PREPARE_MSG_LOGGER = Logger.getLogger("PrepareMsgLogger");
     private static LoggerManager instance;
 
-    private LoggerManager() {
+    LoggerManager() {
         configureLogger(FILE_SCANNER_LOGGER, getLogFilePath());
         configureLogger(PREPARE_MSG_LOGGER, getPrepareMsgLogFilePath());
     }
@@ -43,8 +44,8 @@ public final class LoggerManager {
             // Check if the log file already exists
             File logFile = new File(logFilePath);
             // Log the paths for debugging
-            logger.info("Provided log file path: " + logFilePath);
-            logger.info("Parent directory: " + logFile.getParent());
+            logger.log(Level.INFO, "Provided log file path: {0}", logFilePath);
+            logger.log(Level.INFO, "Parent directory: {0}", logFile.getParent());
             if (!logFile.exists()) {
                 // Create the log file and its parent directories
                 logFile.getParentFile().mkdirs();
@@ -58,7 +59,7 @@ public final class LoggerManager {
             // Flush the file handler to ensure logs are written immediately
             fileHandler.flush();
         } catch (IOException e) {
-            logger.severe("Error configuring logger: " + e.getMessage());
+            logger.log(Level.SEVERE, "Error configuring logger: {0}", e.getMessage());
         }
     }
 

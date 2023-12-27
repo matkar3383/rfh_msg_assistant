@@ -1,84 +1,48 @@
 package com.coba;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.Scanner;
+import java.io.IOException;
+import java.util.Properties;
+import java.util.logging.Level;
 
-/**
- * Main application class.
- */
-public final class App {
+public class App {
 
-    private static final int SCAN_INTERVAL_MS = 1000;
-    private static final LoggerManager LOGGER_MANAGER = LoggerManager.getInstance();
-    private static final String DIRECTORY_PATH = PropertiesLoader.getProperty("directory.path");
-    private static final MsgToMQ MSG_TO_MQ = new MsgToMQ(LOGGER_MANAGER);
-
-    private App() {
-        throw new IllegalStateException("Utility class");
-    }
-
-    /**
-     * Main method to run the application.
-     */
     public static void main(String[] args) {
-        while (true) {
-            ServerFileScanner fileScanner = new ServerFileScanner(DIRECTORY_PATH, LOGGER_MANAGER);
-            File file = fileScanner.findOldestFile();
+        LoggerManager loggerManager = LoggerManager.getInstance();
 
-            if (file != null) {
-                String messageContent = readFileContent(file);
-                logMessageContent(messageContent);
+        // Load application properties
+        if (!PropertiesLoader.loadProperties("application.properties")) {
+            loggerManager.logError("Failed to load application properties. Exiting...");
+            System.exit(1);
+        }
 
-                // Add RFH2 header
-                messageContent = addRFH2Header(messageContent);
+        // Get directory path from application.properties
+        String directoryPath = PropertiesLoader.getProperty("server.directory");
 
-                logPreparedMessage(messageContent);
-                MSG_TO_MQ.prepareAndSendToMQ(messageContent);
-                logSuccessfulFileSending(file.getName());
+        // Initialize server file scanner
+        ServerFileScanner serverFileScanner = new ServerFileScanner(directoryPath, loggerManager);
+
+        // Initialize MQ message preparer
+        MsgToMQ msgToMQ = new MsgToMQ(loggerManager);
+
+        // Continuously scan the server location
+        serverFileScanner.continuouslyScanServerLocation(file -> {
+            try {
+                // Prepare and send message to MQ
+                msgToMQ.prepareAndSendToMQ(file);
+
+                // Log success message
+                loggerManager.logInfo("Successfully processed and sent file to MQ: " + file.getName());
+            } catch (IOException e) {
+                // Log error if an issue occurs during MQ message preparation or sending
+                loggerManager.logError("Error processing or sending file to MQ: " + e.getMessage());
             }
+        });
 
-            sleepForInterval();
-        }
-    }
-
-    private static void logMessageContent(String messageContent) {
-        LOGGER_MANAGER.logInfo("Read message content:\n" + messageContent);
-    }
-
-    private static void logPreparedMessage(String messageContent) {
-        LOGGER_MANAGER.logInfo("Prepared message for MQ:\n" + messageContent);
-    }
-
-    private static void logSuccessfulFileSending(String fileName) {
-        LOGGER_MANAGER.logInfo("File \"" + fileName + "\" was successfully sent.");
-    }
-
-    private static void sleepForInterval() {
-        try {
-            Thread.sleep(SCAN_INTERVAL_MS);
-        } catch (InterruptedException e) {
-            LOGGER_MANAGER.logInfo("Thread sleep interrupted: " + e.getMessage());
-        }
-    }
-
-    private static String readFileContent(File file) {
-        try (Scanner scanner = new Scanner(file)) {
-            StringBuilder contentBuilder = new StringBuilder();
-
-            while (scanner.hasNextLine()) {
-                contentBuilder.append(scanner.nextLine()).append("\n");
-            }
-
-            return contentBuilder.toString();
-        } catch (FileNotFoundException e) {
-            LOGGER_MANAGER.logInfo("Error while reading the file: " + e.getMessage());
-            return "";
-        }
-    }
-
-    private static String addRFH2Header(String messageContent) {
-        // Implementation of adding RFH2 header to the message content
-        return messageContent;
+        // Shut down gracefully when the application is interrupted
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            serverFileScanner.stop();
+            loggerManager.logInfo("Application shut down gracefully.");
+        }));
     }
 }

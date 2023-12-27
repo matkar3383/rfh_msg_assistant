@@ -1,41 +1,45 @@
 package com.coba;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * Klasa narzędziowa do wczytywania właściwości z pliku.
+ * Utility class for loading properties from a file.
  */
 public final class PropertiesLoader {
 
-    private static final Properties PROPERTIES = new Properties();
+    private static final String PROPERTIES_FILE = "src/main/resources/application.properties";
+    private static final Properties PROPERTIES = loadProperties();
 
     private PropertiesLoader() {
-        // Prywatny konstruktor, aby zapobiec instancjonowaniu
+        // private constructor to prevent instantiation
     }
 
     /**
-     * Wczytuje właściwości z pliku.
+     * Load properties from the file.
      *
-     * @return true, jeśli właściwości zostały pomyślnie wczytane, false w
-     *         przeciwnym razie.
+     * @return The loaded properties.
      */
-    public static boolean loadProperties() {
-        try (FileInputStream input = new FileInputStream("src/main/resources/application.properties")) {
-            PROPERTIES.load(input);
-            return true; // Zwróć true, jeśli właściwości zostały pomyślnie wczytane
+    static Properties loadProperties() {
+        Properties properties = new Properties();
+        try (InputStream input = PropertiesLoader.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
+            if (input == null) {
+                throw new IOException("Sorry, unable to find " + PROPERTIES_FILE);
+            }
+            properties.load(input);
         } catch (IOException e) {
-            System.err.println("Error while loading properties: " + e.getMessage());
-            return false; // Zwróć false, jeśli wystąpi błąd podczas wczytywania
+            e.printStackTrace();
+            // Handle the exception according to your needs
         }
+        return properties;
     }
 
     /**
-     * Pobiera wartość właściwości na podstawie klucza.
+     * Get the value of a property.
      *
-     * @param key Klucz właściwości.
-     * @return Wartość właściwości lub null, jeśli klucz nie został znaleziony.
+     * @param key The key of the property.
+     * @return The value of the property.
      */
     public static String getProperty(String key) {
         return PROPERTIES.getProperty(key);

@@ -2,31 +2,44 @@ package com.coba;
 
 import com.ibm.mq.MQException;
 import com.ibm.mq.MQMessage;
-import com.ibm.mq.MQPutMessageOptions;
 import com.ibm.mq.MQQueue;
 import com.ibm.mq.MQQueueManager;
 import com.ibm.mq.constants.CMQC;
 import com.ibm.mq.headers.MQRFH2;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Hashtable;
+import java.util.logging.Logger;
 
+/**
+ * Class for preparing and sending messages to MQ.
+ */
 public class MsgToMQ {
 
+    private static final Logger LOG = Logger.getLogger(MsgToMQ.class.getName());
     private final LoggerManager loggerManager;
 
+    /**
+     * Constructor for MsgToMQ.
+     *
+     * @param loggerManager The logger manager.
+     */
     public MsgToMQ(LoggerManager loggerManager) {
         this.loggerManager = loggerManager;
     }
 
     /**
-     * @param messageContent
+     * Prepare and send message to MQ.
+     *
+     * @param file The file to be sent as a message.
      */
-    public void prepareAndSendToMQ(String messageContent) {
+    public void prepareAndSendToMQ(File file) {
         // Load application properties
-        if (!PropertiesLoader.loadProperties()) {
+        if (!PropertiesLoader.loadProperties("application.properties")) {
             loggerManager.logError("Failed to load application properties. Exiting...");
             System.exit(1);
         }
@@ -40,6 +53,10 @@ public class MsgToMQ {
         String qmgr = PropertiesLoader.getProperty("mq.qmgr");
         String queueName = PropertiesLoader.getProperty("mq.queueName");
 
+        int encoding = Integer.parseInt(PropertiesLoader.getProperty("mq.encoding"));
+        int codedCharSetId = Integer.parseInt(PropertiesLoader.getProperty("mq.codedCharSetId"));
+        int bufferSize = Integer.parseInt(PropertiesLoader.getProperty("mq.bufferSize"));
+
         Hashtable<String, Object> properties = new Hashtable<>();
         properties.put(CMQC.HOST_NAME_PROPERTY, host);
         properties.put(CMQC.PORT_PROPERTY, port);
@@ -47,18 +64,17 @@ public class MsgToMQ {
         properties.put(CMQC.USER_ID_PROPERTY, appUser);
         properties.put(CMQC.PASSWORD_PROPERTY, appPassword);
 
-        try (FileInputStream inputStream = new FileInputStream(new File(messageContent))) {
+        try (FileInputStream inputStream = new FileInputStream(file)) {
             MQQueueManager queueManager = new MQQueueManager(qmgr, properties);
             MQQueue queue = queueManager.accessQueue(queueName, CMQC.MQOO_BROWSE);
 
             String ifCobaString = "IF_COBA";
             MQRFH2 mqrfh2 = new MQRFH2();
-            int codedCharSetId = 1208; // Replace magic number with a constant
-            mqrfh2.setEncoding(CMQC.MQENC_NATIVE);
+            mqrfh2.setEncoding(encoding);
             mqrfh2.setCodedCharSetId(codedCharSetId);
             mqrfh2.setFormat(CMQC.MQFMT_NONE);
             mqrfh2.setFlags(0);
-            mqrfh2.setNameValueCCSID(1208);
+            mqrfh2.setNameValueCCSID(codedCharSetId);
             mqrfh2.setFieldValue(ifCobaString, "OriginatorApplication", "xxxxx");
             mqrfh2.setFieldValue(ifCobaString, "UserReference", "xxxxx");
             String requestor = "o=" + PropertiesLoader.getProperty("mq.requestorOrg") + ",o=swift";
@@ -68,13 +84,19 @@ public class MsgToMQ {
             mqrfh2.setFieldValue(ifCobaString, "Service", PropertiesLoader.getProperty("mq.service"));
             mqrfh2.setFieldValue(ifCobaString, "RequestType", PropertiesLoader.getProperty("mq.requestType"));
             mqrfh2.setFieldValue(ifCobaString, "Compression", PropertiesLoader.getProperty("mq.compression"));
-            mqrfh2.setFieldValue(ifCobaString, "FileName", PropertiesLoader.getProperty("mq.fileName"));
+            mqrfh2.setFieldValue(ifCobaString, "FileName", file.getName());
 
             MQMessage msgForSending = new MQMessage();
-            MQPutMessageOptions putMessageOptions = new MQPutMessageOptions();
+
+            // Writing RFH2 header and message payload
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            mqrfh2.write(new DataOutputStream(byteArrayOutputStream), 0, 0);
+            msgForSending.write(byteArrayOutputStream.toByteArray());
+
+            // Write message payload
+            byte[] buf1 = new byte[bufferSize];
             int bytesRead;
             int bytesTotalSize = 0;
-            byte[] buf1 = new byte[8192]; // Replace magic number with a constant
 
             while ((bytesRead = inputStream.read(buf1)) != -1) {
                 msgForSending.write(buf1, 0, bytesRead);
@@ -88,7 +110,6 @@ public class MsgToMQ {
             msgForSending.messageFlags = CMQC.MQMF_SEGMENTATION_ALLOWED;
             msgForSending.messageFlags |= CMQC.MQMF_MSG_IN_GROUP;
 
-            msgForSending.write(mqrfh2.write());
             queue.put(msgForSending);
 
             loggerManager.logInfo("Successfully sent message to MQ");
