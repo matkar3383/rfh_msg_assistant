@@ -26,7 +26,7 @@ public final class PropertiesLoader {
             PROPERTIES.load(input);
             return true; // Zwróć true, jeśli właściwości zostały pomyślnie wczytane
         } catch (IOException e) {
-            System.err.println("Błąd podczas wczytywania właściwości: " + e.getMessage());
+            System.err.println("Error while loading properties: " + e.getMessage());
             return false; // Zwróć false, jeśli wystąpi błąd podczas wczytywania
         }
     }

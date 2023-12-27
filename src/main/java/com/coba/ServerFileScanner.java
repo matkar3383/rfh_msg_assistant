@@ -104,6 +104,7 @@ public class ServerFileScanner {
      * @return The content of the file as a String.
      * @throws FileNotFoundException If the file is not found.
      */
+    @SuppressWarnings("ConvertToTryWithResources")
     private String readFileContent(File file) throws FileNotFoundException {
         try (Scanner scanner = new Scanner(file)) {
             StringBuilder contentBuilder = new StringBuilder();
