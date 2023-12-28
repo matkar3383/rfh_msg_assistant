@@ -1,9 +1,11 @@
 package com.coba;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
- * Hello world!
+ * Klasa uruchomieniowa aplikacji.
+ * Ładuje właściwości, inicjalizuje i uruchamia ServerFileScanner oraz przekazuje pliki do MsgToMQ.
  */
 public final class App {
 
@@ -12,33 +14,35 @@ public final class App {
     }
 
     /**
-     * Main method to run the application.
+     * Metoda główna do uruchamiania aplikacji.
      *
-     * @param args The command line arguments.
+     * @param args Argumenty wiersza poleceń.
+     * @throws java.io.IOException
      */
-    public static void main(String[] args) {
-        // Load application properties
+    public static void main(String[] args) throws IOException {
+        // Ładuje właściwości aplikacji
         if (!PropertiesLoader.loadProperties()) {
-            System.err.println("Failed to load application properties. Exiting...");
+            System.err.println("Nie udało się załadować właściwości aplikacji. Zamykanie...");
             System.exit(1);
         }
 
-        // Get directory path from application properties
+        // Pobiera ścieżkę katalogu z właściwości aplikacji
         String directoryPath = PropertiesLoader.getProperty("directory.path");
 
-        // Create and run ServerFileScanner with LoggerManager instance
-        ServerFileScanner fileScanner = new ServerFileScanner(directoryPath, LoggerManager.getInstance());
+        // Inicjalizuje i uruchamia ServerFileScanner z instancją LogManager
+        ServerFileScanner fileScanner = new ServerFileScanner(directoryPath, LogManager.getInstance(),
+                new MsgToMQ(LogManager.getInstance()));
         fileScanner.continuouslyScanServerLocation();
 
-        // Get the last processed file from ServerFileScanner
+        // Pobiera ostatnio przetworzony plik z ServerFileScanner
         File lastProcessedFile = fileScanner.getLastProcessedFile();
 
-        // Check if the last processed file is not null
+        // Sprawdza, czy ostatnio przetworzony plik nie jest null
         if (lastProcessedFile != null) {
-            // Create an instance of MsgToMQ with LoggerManager
-            MsgToMQ msgToMQ = new MsgToMQ(LoggerManager.getInstance());
+            // Inicjalizuje instancję MsgToMQ z LogManager
+            MsgToMQ msgToMQ = new MsgToMQ(LogManager.getInstance());
 
-            // Call prepareAndSendToMQ method with the last processed file
+            // Wywołuje metodę prepareAndSendToMQ z ostatnio przetworzonym plikiem
             msgToMQ.prepareAndSendToMQ(lastProcessedFile.getAbsolutePath());
         }
     }

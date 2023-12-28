@@ -2,42 +2,51 @@ package com.coba;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Scanner;
 
 /**
- * This class scans a server location for a file and reads its content into a
- * String.
- * It continuously checks for a file at the specified location and logs
- * successful file loading.
+ * Klasa do skanowania lokalizacji serwera w poszukiwaniu plików.
+ * Odczytuje zawartość pliku i przekazuje go do instancji klasy MsgToMQ.
+ * Loguje informacje o wczytanych plikach.
  */
 public class ServerFileScanner {
 
     private static final int SCAN_INTERVAL_MS = 1000;
-    private final LoggerManager loggerManager;
+    private final LogManager loggerManager;
     private final String directoryPath;
     private String lastFileContent;
     private File lastProcessedFile;
     private volatile boolean isRunning = true;
+    private MsgToMQ msgToMQ;  // Dodana deklaracja pola msgToMQ
 
-    public ServerFileScanner(String directoryPath, LoggerManager loggerManager) {
+    /**
+     * Konstruktor klasy ServerFileScanner.
+     *
+     * @param directoryPath  Ścieżka do katalogu serwera.
+     * @param loggerManager  Instancja LogManager do logowania.
+     * @param msgToMQ        Instancja MsgToMQ do przekazywania plików.
+     */
+    public ServerFileScanner(String directoryPath, LogManager loggerManager, MsgToMQ msgToMQ) {
         this.directoryPath = directoryPath;
         this.loggerManager = loggerManager;
+        this.msgToMQ = msgToMQ;  // Dodane przypisanie msgToMQ
     }
 
     /**
-     * Stops the server file scanner.
+     * Metoda zatrzymująca skanowanie serwera.
      */
     public void stop() {
         isRunning = false;
     }
 
     /**
-     * Continuously scans the server location for the specified file and reads its
-     * content.
+     * Metoda ciągłego skanowania lokalizacji serwera w poszukiwaniu plików.
+     * @throws java.io.IOException
      */
-    public void continuouslyScanServerLocation() {
+    public void continuouslyScanServerLocation() throws IOException {
         while (isRunning) {
             File directory = new File(directoryPath);
 
@@ -57,7 +66,7 @@ public class ServerFileScanner {
 
     private boolean checkDirectory(File directory) {
         if (!directory.exists() || !directory.isDirectory()) {
-            System.err.println("The specified directory does not exist: " + directory.getAbsolutePath());
+            loggerManager.logError("Podany katalog nie istnieje: " + directory.getAbsolutePath());
             return false;
         }
         return true;
@@ -67,7 +76,7 @@ public class ServerFileScanner {
         File[] files = directory.listFiles();
 
         if (files == null || files.length == 0) {
-            System.err.println("No files found in the specified directory: " + directory.getAbsolutePath());
+            loggerManager.logError("Brak plików w podanym katalogu: " + directory.getAbsolutePath());
             return null;
         }
 
@@ -75,24 +84,27 @@ public class ServerFileScanner {
         return files[0];
     }
 
-    private void processOldestFile(File oldestFile) {
+    private void processOldestFile(File oldestFile) throws IOException {
         try {
             String fileContent = readFileContent(oldestFile);
 
             if (!fileContent.equals(lastFileContent)) {
                 logSuccessfulFileLoading(oldestFile.getName());
                 lastFileContent = fileContent;
-                lastProcessedFile = oldestFile; // Set the last processed file
+                lastProcessedFile = oldestFile; // Ustawia ostatnio przetworzony plik
+
+                // Dodane wywołanie, aby przekazać plik do MsgToMQ
+                msgToMQ.prepareAndSendToMQ(lastProcessedFile.getAbsolutePath());
             }
         } catch (FileNotFoundException e) {
-            System.err.println("Error while reading the file: " + e.getMessage());
+            loggerManager.logError("Błąd podczas czytania pliku: " + e.getMessage());
         }
     }
 
     /**
-     * Gets the last processed file.
+     * Pobiera ostatnio przetworzony plik.
      *
-     * @return The last processed file.
+     * @return Ostatnio przetworzony plik.
      */
     public File getLastProcessedFile() {
         return lastProcessedFile;
@@ -104,19 +116,19 @@ public class ServerFileScanner {
 
     private void sleepForInterval() {
         try {
-            // Sleep for the defined interval before checking again
+            // Czekaj przez zdefiniowany interwał przed kolejnym sprawdzeniem
             Thread.sleep(SCAN_INTERVAL_MS);
         } catch (InterruptedException e) {
-            System.err.println("Thread sleep interrupted: " + e.getMessage());
+            loggerManager.logError("Przerwane oczekiwanie wątku: " + e.getMessage());
         }
     }
 
     /**
-     * Reads the content of the file.
+     * Odczytuje zawartość pliku.
      *
-     * @param file The file to read.
-     * @return The content of the file as a String.
-     * @throws FileNotFoundException If the file is not found.
+     * @param file Plik do odczytu.
+     * @return Zawartość pliku jako String.
+     * @throws FileNotFoundException Jeśli plik nie zostanie znaleziony.
      */
     private String readFileContent(File file) throws FileNotFoundException {
         try (Scanner scanner = new Scanner(file)) {
