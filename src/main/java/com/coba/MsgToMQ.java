@@ -37,7 +37,7 @@ public class MsgToMQ {
     public void prepareAndSendToMQ(String file) {
         try {
             // Load application properties
-            PropertiesLoader.getProperties();
+            PropertiesLoader.loadProperties();
             String host = PropertiesLoader.getProperty("mq.host");
             int port = Integer.parseInt(PropertiesLoader.getProperty("mq.port"));
             String channel = PropertiesLoader.getProperty("mq.channel");
@@ -58,7 +58,7 @@ public class MsgToMQ {
 
             File fileToProcess = new File(file);
             if (!fileToProcess.exists()) {
-                loggerManager.logError("File does not exist: " + file);
+                loggerManager.logError("File " + file + " does not exist");
                 return;
             }
 
@@ -73,8 +73,24 @@ public class MsgToMQ {
                 mqrfh2.setFormat(CMQC.MQFMT_NONE);
                 mqrfh2.setFlags(0);
                 mqrfh2.setNameValueCCSID(codedCharSetId);
-                mqrfh2.setFieldValue(ifCobaString, "OriginatorApplication", "xxxxx");
-                // ... (Pozostałe ustawienia RFH2)
+                mqrfh2.setFieldValue(ifCobaString, "Direction", PropertiesLoader.getProperty("ifcoba.direction"));
+                mqrfh2.setFieldValue(ifCobaString, "OriginatorApplication",
+                        PropertiesLoader.getProperty("ifcoba.origAppl"));
+                mqrfh2.setFieldValue(ifCobaString, "Owner", PropertiesLoader.getProperty("ifcoba.owner"));
+                mqrfh2.setFieldValue(ifCobaString, "Requestor", PropertiesLoader.getProperty("ifcoba.requestor"));
+                mqrfh2.setFieldValue(ifCobaString, "Responder", PropertiesLoader.getProperty("ifcoba.responder"));
+                mqrfh2.setFieldValue(ifCobaString, "Service", PropertiesLoader.getProperty("ifcoba.service"));
+                mqrfh2.setFieldValue(ifCobaString, "RequestType", PropertiesLoader.getProperty("ifcoba.requestType"));
+                mqrfh2.setFieldValue(ifCobaString, "DeliveryMode",
+                        PropertiesLoader.getProperty("ifcoba.deliveryMode"));
+                mqrfh2.setFieldValue(ifCobaString, "DelNotRequest",
+                        PropertiesLoader.getProperty("ifcoba.delNotRequest"));
+                mqrfh2.setFieldValue(ifCobaString, "DelNotReceiverDN",
+                        PropertiesLoader.getProperty("ifcoba.DelNotReceiverDN"));
+                mqrfh2.setFieldValue(ifCobaString, "Compression", PropertiesLoader.getProperty("ifcoba.compression"));
+                mqrfh2.setFieldValue(ifCobaString, "NRIndicator", PropertiesLoader.getProperty("ifcoba.NRIndicator"));
+                mqrfh2.setFieldValue(ifCobaString, "DuplicateCheckOverride",
+                        PropertiesLoader.getProperty("ifcoba.duplicateCheckOverride"));
 
                 MQMessage msgForSending = new MQMessage();
                 // ... (Pozostała część kodu)

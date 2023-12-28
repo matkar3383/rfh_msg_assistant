@@ -1,46 +1,45 @@
 package com.coba;
 
-import java.io.IOException;
+import java.io.File;
 
 /**
- * Main application class for handling file scanning and message preparation for MQ.
+ * Hello world!
  */
 public final class App {
 
     private App() {
-        throw new UnsupportedOperationException("Utility class - do not instantiate");
+        throw new IllegalStateException("Utility class");
     }
 
     /**
      * Main method to run the application.
      *
-     * @param args Command line arguments.
+     * @param args The command line arguments.
      */
     public static void main(String[] args) {
-        try {
-            PropertiesLoader.getProperties();
-            String fileScannerLogPath = PropertiesLoader.getProperty("fileScanner.log");
-            String prepareMsgLogPath = PropertiesLoader.getProperty("prepareMsg.log");
-            LoggerManager fileScannerLoggerManager = LoggerManager.getInstance(fileScannerLogPath);
-            LoggerManager prepareMsgLoggerManager = LoggerManager.getInstance(prepareMsgLogPath);
+        // Load application properties
+        if (!PropertiesLoader.loadProperties()) {
+            System.err.println("Failed to load application properties. Exiting...");
+            System.exit(1);
+        }
 
-            ServerFileScanner serverFileScanner = new ServerFileScanner(
-                    PropertiesLoader.getProperty("server.directory"), fileScannerLoggerManager);
+        // Get directory path from application properties
+        String directoryPath = PropertiesLoader.getProperty("directory.path");
 
-            String fileToSend = serverFileScanner.getFilePath();
+        // Create and run ServerFileScanner with LoggerManager instance
+        ServerFileScanner fileScanner = new ServerFileScanner(directoryPath, LoggerManager.getInstance());
+        fileScanner.continuouslyScanServerLocation();
 
-            if (fileToSend != null) {
-                MsgToMQ msgToMQ = new MsgToMQ(prepareMsgLoggerManager);
-                msgToMQ.prepareAndSendToMQ(fileToSend);
+        // Get the last processed file from ServerFileScanner
+        File lastProcessedFile = fileScanner.getLastProcessedFile();
 
-                fileScannerLoggerManager.closeLogFile();
-                prepareMsgLoggerManager.closeLogFile();
-            } else {
-                System.out.println("No files to send.");
-            }
+        // Check if the last processed file is not null
+        if (lastProcessedFile != null) {
+            // Create an instance of MsgToMQ with LoggerManager
+            MsgToMQ msgToMQ = new MsgToMQ(LoggerManager.getInstance());
 
-        } catch (IOException e) {
-            e.printStackTrace();
+            // Call prepareAndSendToMQ method with the last processed file
+            msgToMQ.prepareAndSendToMQ(lastProcessedFile.getAbsolutePath());
         }
     }
 }

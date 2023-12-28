@@ -1,55 +1,40 @@
 package com.coba;
 
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * Utility class for loading properties from the configuration file.
+ * Klasa narzędziowa do wczytywania właściwości z pliku.
  */
 public final class PropertiesLoader {
-
-    private static final String PROPERTIES_FILE = "application.properties";
-    private static Properties properties;
-
-    static {
-        initProperties();
-    }
+    @SuppressWarnings("checkstyle:ConstantName")
+    private static final Properties properties = new Properties();
 
     private PropertiesLoader() {
-        throw new AssertionError("Utility class should not be instantiated");
+        // Prywatny konstruktor, aby zapobiec instancjonowaniu
     }
 
     /**
-     * Initializes properties by loading them from the configuration file.
+     * Wczytuje właściwości z pliku.
+     *
+     * @return true, jeśli właściwości zostały pomyślnie wczytane, false w przeciwnym razie.
      */
-    private static void initProperties() {
-        properties = new Properties();
-        try (InputStream input = PropertiesLoader.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
-            if (input == null) {
-                System.out.println("Sorry, unable to find " + PROPERTIES_FILE);
-                return;
-            }
+    public static boolean loadProperties() {
+        try (FileInputStream input = new FileInputStream("src/main/resources/application.properties")) {
             properties.load(input);
-        } catch (IOException ex) {
-            ex.printStackTrace();
+            return true; // Zwróć true, jeśli właściwości zostały pomyślnie wczytane
+        } catch (IOException e) {
+            System.err.println("Błąd podczas wczytywania właściwości: " + e.getMessage());
+            return false; // Zwróć false, jeśli wystąpi błąd podczas wczytywania
         }
     }
 
     /**
-     * Gets the loaded properties.
+     * Pobiera wartość właściwości na podstawie klucza.
      *
-     * @return The loaded properties.
-     */
-    public static Properties getProperties() {
-        return properties;
-    }
-
-    /**
-     * Gets the value for a specified key from the loaded properties.
-     *
-     * @param key The key for which to get the value.
-     * @return The value for the specified key.
+     * @param key Klucz właściwości.
+     * @return Wartość właściwości lub null, jeśli klucz nie został znaleziony.
      */
     public static String getProperty(String key) {
         return properties.getProperty(key);
